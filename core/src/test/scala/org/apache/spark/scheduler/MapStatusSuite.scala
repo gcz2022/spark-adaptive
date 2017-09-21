@@ -136,7 +136,7 @@ class MapStatusSuite extends SparkFunSuite {
 
   test("Blocks which are bigger than SHUFFLE_ACCURATE_BLOCK_THRESHOLD should not be " +
     "underestimated.") {
-    val conf = new SparkConf().set(config.SHUFFLE_ACCURATE_BLOCK_THRESHOLD.key, "1000")
+    val conf = new SparkConf().set(config.SHUFFLE_ACCURATE_BLOCK_SIZE_THRESHOLD.key, "1000")
     val env = mock(classOf[SparkEnv])
     doReturn(conf).when(env).conf
     SparkEnv.set(env)
