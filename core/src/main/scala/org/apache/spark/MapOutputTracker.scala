@@ -495,7 +495,17 @@ private[spark] class MapOutputTrackerMaster(
           totalSizes(i) += s.getSizeForBlock(i)
         }
       }
-      new MapOutputStatistics(dep.shuffleId, totalSizes)
+      var totalRecords = new Array[Long](0)
+      val records = statuses(0).getRecordForBlock(0)
+      if (records != -1) {
+        totalRecords = new Array[Long](dep.partitioner.numPartitions)
+        for (s <- statuses) {
+          for (i <- totalRecords.indices) {
+            totalRecords(i) += s.getRecordForBlock(i)
+          }
+        }
+      }
+      new MapOutputStatistics(dep.shuffleId, totalSizes, totalRecords)
     }
   }
 

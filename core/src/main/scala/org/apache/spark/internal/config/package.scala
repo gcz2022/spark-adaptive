@@ -308,6 +308,20 @@ package object config {
       .bytesConf(ByteUnit.BYTE)
       .createWithDefault(100 * 1024 * 1024)
 
+  private[spark] val SHUFFLE_STATISTICS_VERBOSE =
+    ConfigBuilder("spark.shuffle.statistics.verbose")
+      .doc("Collect shuffle statistics in verbose mode")
+      .booleanConf
+      .createWithDefault(false)
+
+  private[spark] val SHUFFLE_ACCURATE_BLOCK_THRESHOLD_RECORD =
+    ConfigBuilder("spark.shuffle.accurateBlockThresholdRecord")
+      .doc("When we compress the records number of shuffle blocks in HighlyCompressedMapStatus, " +
+        "we will record the number accurately if it's above this config. The record number will " +
+        "be used for data skew judgement when spark.shuffle.statistics.verbose is set true.")
+      .bytesConf(ByteUnit.BYTE)
+      .createWithDefault(200 * 1024 * 1024)
+
   private[spark] val SHUFFLE_REGISTRATION_TIMEOUT =
     ConfigBuilder("spark.shuffle.registration.timeout")
       .doc("Timeout in milliseconds for registration to the external shuffle service.")

@@ -73,7 +73,16 @@ object SizeInBytesOnlyStatsPlanVisitor extends SparkPlanVisitor[Statistics] {
   override def visitShuffleExchange(p: ShuffleExchange): Statistics = {
     if (p.mapOutputStatistics != null) {
       val sizeInBytes = p.mapOutputStatistics.bytesByPartitionId.sum
-      Statistics(sizeInBytes = sizeInBytes)
+      val bytesByPartitionId = p.mapOutputStatistics.bytesByPartitionId
+      if (p.mapOutputStatistics.recordsByPartitionId.nonEmpty) {
+        val rowCount = p.mapOutputStatistics.recordsByPartitionId.sum
+        val rowsByPartitionId = p.mapOutputStatistics.recordsByPartitionId
+        Statistics(sizeInBytes = sizeInBytes,
+          rowCount = Some(rowCount),
+          partStatistics = Some(PartitionStatistics(bytesByPartitionId, rowsByPartitionId)))
+      } else {
+        Statistics(sizeInBytes = sizeInBytes)
+      }
     } else {
       visitUnaryExecNode(p)
     }
@@ -101,7 +110,16 @@ object SizeInBytesOnlyStatsPlanVisitor extends SparkPlanVisitor[Statistics] {
   override def visitQueryStage(p: QueryStage): Statistics = {
     if (p.mapOutputStatistics != null) {
       val sizeInBytes = p.mapOutputStatistics.bytesByPartitionId.sum
-      Statistics(sizeInBytes = sizeInBytes)
+      val bytesByPartitionId = p.mapOutputStatistics.bytesByPartitionId
+      if (p.mapOutputStatistics.recordsByPartitionId.nonEmpty) {
+        val rowCount = p.mapOutputStatistics.recordsByPartitionId.sum
+        val rowsByPartitionId = p.mapOutputStatistics.recordsByPartitionId
+        Statistics(sizeInBytes = sizeInBytes,
+          rowCount = Some(rowCount),
+          partStatistics = Some(PartitionStatistics(bytesByPartitionId, rowsByPartitionId)))
+      } else {
+        Statistics(sizeInBytes = sizeInBytes)
+      }
     } else {
       p.child.stats
     }

@@ -125,7 +125,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     if (!records.hasNext()) {
       partitionLengths = new long[numPartitions];
       shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, null);
-      mapStatus = MapStatus$.MODULE$.apply(blockManager.shuffleServerId(), partitionLengths);
+      mapStatus = MapStatus$.MODULE$.apply(blockManager.shuffleServerId(), partitionLengths, new long[numPartitions]);
       return;
     }
     final SerializerInstance serInstance = serializer.newInstance();
@@ -159,15 +159,18 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
 
     File output = shuffleBlockResolver.getDataFile(shuffleId, mapId);
     File tmp = Utils.tempFileWith(output);
+    MapStatistics mapStats;
     try {
-      partitionLengths = writePartitionedFile(tmp);
+      mapStats = writePartitionedFile(tmp);
+      partitionLengths = mapStats.lengths;
       shuffleBlockResolver.writeIndexFileAndCommit(shuffleId, mapId, partitionLengths, tmp);
     } finally {
       if (tmp.exists() && !tmp.delete()) {
         logger.error("Error while deleting temp file {}", tmp.getAbsolutePath());
       }
     }
-    mapStatus = MapStatus$.MODULE$.apply(blockManager.shuffleServerId(), partitionLengths);
+    mapStatus = MapStatus$.MODULE$.apply(
+      blockManager.shuffleServerId(), mapStats.lengths, mapStats.records);
   }
 
   @VisibleForTesting
@@ -180,12 +183,13 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
    *
    * @return array of lengths, in bytes, of each partition of the file (used by map output tracker).
    */
-  private long[] writePartitionedFile(File outputFile) throws IOException {
+  private MapStatistics writePartitionedFile(File outputFile) throws IOException {
     // Track location of the partition starts in the output file
     final long[] lengths = new long[numPartitions];
+    final long[] rows = new long[numPartitions];
     if (partitionWriters == null) {
       // We were passed an empty iterator
-      return lengths;
+      return new MapStatistics(lengths, rows);
     }
 
     final FileOutputStream out = new FileOutputStream(outputFile, true);
@@ -194,6 +198,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
     try {
       for (int i = 0; i < numPartitions; i++) {
         final File file = partitionWriterSegments[i].file();
+        rows[i] = partitionWriterSegments[i].record();
         if (file.exists()) {
           final FileInputStream in = new FileInputStream(file);
           boolean copyThrewException = true;
@@ -214,7 +219,7 @@ final class BypassMergeSortShuffleWriter<K, V> extends ShuffleWriter<K, V> {
       writeMetrics.incWriteTime(System.nanoTime() - writeStartTime);
     }
     partitionWriters = null;
-    return lengths;
+    return new MapStatistics(lengths, rows);
   }
 
   @Override
