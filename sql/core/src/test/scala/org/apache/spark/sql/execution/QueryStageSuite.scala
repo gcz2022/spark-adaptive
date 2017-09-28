@@ -338,12 +338,14 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
       Array(1L, 1, 0),
       Array(0L, 1, 0),
       Array(0L, 0),
-      Array(1L, 2, 3)
+      Array(1L, 2, 3),
+      Array[Long]()
     )
     val anserStart = Array(
       Array(2, 5),
       Array(0),
       Array(1),
+      Array(0),
       Array(0),
       Array(0)
     )
@@ -352,7 +354,8 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
       Array(2),
       Array(2),
       Array(0),
-      Array(3)
+      Array(3),
+      Array(0)
     )
     val func = OptimizeJoin(new SQLConf).calculatePartitionStartEndIndices _
     testArrays.zip(anserStart).zip(anserEnd).foreach {
@@ -362,5 +365,20 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
         assert(resultEnd.deep == expectEnd.deep)
       case _ =>
     }
+  }
+
+  test("length equal") {
+    // Recursively list all circumstances, to test if the length equal assertion will fail or not
+    def testList(index: Long, list: Array[Long], limit: Long): Unit = {
+      if (index <= limit) {
+        testList(index + 1, 0L +: list, limit)
+        testList(index + 1, 1L +: list, limit)
+      } else {
+//        println(list.mkString(", "))
+        val (resLeft, resRight) = OptimizeJoin(new SQLConf).calculatePartitionStartEndIndices(list)
+        assert(resLeft.length == resRight.length)
+      }
+    }
+    testList(1, Array(), 15)
   }
 }
