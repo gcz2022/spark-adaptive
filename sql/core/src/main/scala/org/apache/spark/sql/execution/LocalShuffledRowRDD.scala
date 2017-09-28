@@ -56,7 +56,7 @@ class LocalShuffledRowRDD(
   private[this] val partitionEndIndices: Array[Int] = specifiedPartitionEndIndices match {
     case Some(indices) => indices
     case None if specifiedPartitionStartIndices.isEmpty => Array(numPreShufflePartitions)
-    case _ => specifiedPartitionStartIndices.get.drop(0) :+ numPreShufflePartitions
+    case _ => specifiedPartitionStartIndices.get.drop(1) :+ numPreShufflePartitions
   }
 
   override def getDependencies: Seq[Dependency[_]] = List(dependency)
