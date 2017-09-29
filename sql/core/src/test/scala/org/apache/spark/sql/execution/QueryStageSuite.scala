@@ -366,19 +366,4 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
       case _ =>
     }
   }
-
-  test("length equal") {
-    // Recursively list all circumstances, to test if the length equal assertion will fail or not
-    def testList(index: Long, list: Array[Long], limit: Long): Unit = {
-      if (index <= limit) {
-        testList(index + 1, 0L +: list, limit)
-        testList(index + 1, 1L +: list, limit)
-      } else {
-//        println(list.mkString(", "))
-        val (resLeft, resRight) = OptimizeJoin(new SQLConf).calculatePartitionStartEndIndices(list)
-        assert(resLeft.length == resRight.length)
-      }
-    }
-    testList(1, Array(), 15)
-  }
 }
