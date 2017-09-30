@@ -152,8 +152,8 @@ class ExchangeCoordinator(
 
       // If including the nextShuffleInput would exceed the target partition size or the advisory
       // target row count, then start a new partition.
-      if (i > 0 && postShuffleInput._1 +  nextShuffleInput._1 > targetPostShuffleInputSize ||
-        postShuffleInput._2 + nextShuffleInput._2 > targetPostShuffleRowCount) {
+      if (i > 0 && (postShuffleInput._1 +  nextShuffleInput._1 > targetPostShuffleInputSize ||
+        postShuffleInput._2 + nextShuffleInput._2 > targetPostShuffleRowCount)) {
         partitionStartIndices += i
         // reset postShuffleInputSize.
         postShuffleInput = nextShuffleInput
