@@ -85,6 +85,7 @@ import org.apache.spark.sql.execution.{ShuffledRowRDD, SparkPlan}
  */
 class ExchangeCoordinator(
     advisoryTargetPostShuffleInputSize: Long,
+    targetPostShuffleRowCount: Long,
     minNumPostShufflePartitions: Option[Int] = None)
   extends Logging {
 
@@ -135,26 +136,29 @@ class ExchangeCoordinator(
     // The first element of partitionStartIndices is always 0.
     partitionStartIndices += 0
 
-    var postShuffleInputSize = 0L
+    var postShuffleInput = (0L, 0L)
 
     var i = 0
     while (i < numPreShufflePartitions) {
-      // We calculate the total size of ith pre-shuffle partitions from all pre-shuffle stages.
-      // Then, we add the total size to postShuffleInputSize.
-      var nextShuffleInputSize = 0L
+      // We calculate the total size and row count of ith pre-shuffle partitions from all
+      // pre-shuffle stages. Then, we add the total size and row count to postShuffleInput.
+      var nextShuffleInput = (0L, 0L)
       var j = 0
       while (j < mapOutputStatistics.length) {
-        nextShuffleInputSize += mapOutputStatistics(j).bytesByPartitionId(i)
+        nextShuffleInput = (nextShuffleInput._1 + mapOutputStatistics(j).bytesByPartitionId(i),
+          nextShuffleInput._2 + mapOutputStatistics(j).rowsByPartitionId(i))
         j += 1
       }
 
-      // If including the nextShuffleInputSize would exceed the target partition size, then start a
-      // new partition.
-      if (i > 0 && postShuffleInputSize + nextShuffleInputSize > targetPostShuffleInputSize) {
+      // If including the nextShuffleInput would exceed the target partition size or the advisory
+      // target row count, then start a new partition.
+      if (i > 0 && postShuffleInput._1 +  nextShuffleInput._1 > targetPostShuffleInputSize ||
+        postShuffleInput._2 + nextShuffleInput._2 > targetPostShuffleRowCount) {
         partitionStartIndices += i
         // reset postShuffleInputSize.
-        postShuffleInputSize = nextShuffleInputSize
-      } else postShuffleInputSize += nextShuffleInputSize
+        postShuffleInput = nextShuffleInput
+      } else postShuffleInput = (postShuffleInput._1 + nextShuffleInput._1,
+        postShuffleInput._2 + nextShuffleInput._2)
 
       i += 1
     }
@@ -211,7 +215,7 @@ class ExchangeCoordinator(
     val partitionStartIndices = ArrayBuffer[Int]()
     val partitionEndIndices = ArrayBuffer[Int]()
 
-    def nextStartIndice(i: Int): Int = {
+    def nextStartIndex(i: Int): Int = {
       var index = i
       while (index < numPreShufflePartitions && omittedPartitions.contains(index)) {
         index = index + 1
@@ -219,37 +223,42 @@ class ExchangeCoordinator(
       index
     }
 
-    def shufflePartitionSize(partitionId: Int): Long = {
+    def partitionSizeAndRowCount(partitionId: Int): (Long, Long) = {
       var size = 0L
+      var rowCount = 0L
       var j = 0
       while (j < mapOutputStatistics.length) {
         size += mapOutputStatistics(j).bytesByPartitionId(partitionId)
+        rowCount += mapOutputStatistics(j).rowsByPartitionId(partitionId)
         j += 1
       }
-      size
+      (size, rowCount)
     }
 
-    val firstStartIndice = nextStartIndice(0)
-    partitionStartIndices += firstStartIndice
-    var postShuffleInputSize = shufflePartitionSize(firstStartIndice)
+    val firstStartIndex = nextStartIndex(0)
+    partitionStartIndices += firstStartIndex
+    var postShuffleInput = partitionSizeAndRowCount(firstStartIndex)
 
-    var i = firstStartIndice
-    var nextIndice = nextStartIndice(i + 1)
-    while (nextIndice < numPreShufflePartitions) {
-      val nextShuffleInputSize = shufflePartitionSize(nextIndice)
+    var i = firstStartIndex
+    var nextIndex = nextStartIndex(i + 1)
+    while (nextIndex < numPreShufflePartitions) {
+      val nextShuffleInput = partitionSizeAndRowCount(nextIndex)
       // If the next partition is omitted, or including the nextShuffleInputSize would exceed the
       // target partition size, then start a new partition.
-      if (nextIndice != i + 1 ||
-        postShuffleInputSize +  nextShuffleInputSize > targetPostShuffleInputSize) {
+      if (nextIndex != i + 1 ||
+        postShuffleInput._1 +  nextShuffleInput._1 > targetPostShuffleInputSize ||
+        postShuffleInput._2 + nextShuffleInput._2 > targetPostShuffleRowCount) {
         partitionEndIndices += i + 1
-        partitionStartIndices += nextIndice
-        postShuffleInputSize = nextShuffleInputSize
-        i = nextIndice
+        partitionStartIndices += nextIndex
+        postShuffleInput = nextShuffleInput
+        i = nextIndex
       } else {
-        postShuffleInputSize += nextShuffleInputSize
+        postShuffleInput = (postShuffleInput._1 + nextShuffleInput._1,
+          postShuffleInput._2 + nextShuffleInput._2)
+
         i += 1
       }
-      nextIndice = nextStartIndice(nextIndice + 1)
+      nextIndex = nextStartIndex(nextIndex + 1)
     }
     partitionEndIndices += i + 1
 

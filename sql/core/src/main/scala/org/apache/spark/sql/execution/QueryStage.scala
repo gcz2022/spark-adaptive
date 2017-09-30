@@ -225,11 +225,13 @@ abstract class QueryStage extends UnaryExecNode {
     val childMapOutputStatistics = queryStageInputs.map(_.childStage.mapOutputStatistics)
       .filter(_ != null).toArray
     if (childMapOutputStatistics.length > 0) {
+
       val minNumPostShufflePartitions =
         if (conf.minNumPostShufflePartitions > 0) Some(conf.minNumPostShufflePartitions) else None
 
       val exchangeCoordinator = new ExchangeCoordinator(
         conf.targetPostShuffleInputSize,
+        conf.adaptiveTargetPostShuffleRowCount,
         minNumPostShufflePartitions)
 
       if (queryStageInputs.length == 2 && queryStageInputs.forall(_.skewedPartitions.isDefined)) {
