@@ -248,7 +248,7 @@ object SQLConf {
     .createWithDefault(10L * 1000 * 1000)
 
   val ADAPTIVE_EXECUTION_TARGET_POSTSHUFFLE_ROW_COUNT =
-    buildConf("spark.sql.adaptive.adaptiveTargetPostShuffleRowCount")
+    buildConf("spark.sql.adaptive.shuffle.targetPostShuffleRowCount")
     .doc("The target post-shuffle row count of a task.")
     .longConf
     .createWithDefault(20L * 1000 * 1000)

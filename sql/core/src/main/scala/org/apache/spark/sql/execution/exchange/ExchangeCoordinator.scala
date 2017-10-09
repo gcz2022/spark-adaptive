@@ -172,34 +172,27 @@ class ExchangeCoordinator(
       (size, rowCount)
     }
 
-    def isLargerThanTarget(
-      now: Tuple2[Long, Long], plus: Tuple2[Long, Long], targetSize: Long, targetRowCount: Long) = {
-      now._1 + plus._1 > targetSize || now._2 + plus._2 > targetRowCount
-    }
-
-    def increaseSizeAndRowCount(now: Tuple2[Long, Long], plus: Tuple2[Long, Long]) = {
-      (now._1 + plus._1, now._2 + plus._2)
-    }
-
     val firstStartIndex = nextStartIndex(0)
     partitionStartIndices += firstStartIndex
-    var postShuffleInput = partitionSizeAndRowCount(firstStartIndex)
+    var (postShuffleInputSize, postShuffleInputRowCount) = partitionSizeAndRowCount(firstStartIndex)
 
     var i = firstStartIndex
     var nextIndex = nextStartIndex(i + 1)
     while (nextIndex < numPreShufflePartitions) {
-      val nextShuffleInput = partitionSizeAndRowCount(nextIndex)
+      val (nextShuffleInputSize, nextShuffleInputRowCount) = partitionSizeAndRowCount(nextIndex)
       // If the next partition is omitted, or including the nextShuffleInputSize would exceed the
       // target partition size, then start a new partition.
-      if (nextIndex != i + 1 || isLargerThanTarget(postShuffleInput, nextShuffleInput,
-        targetPostShuffleInputSize, targetPostShuffleRowCount)) {
+      if (nextIndex != i + 1
+        || postShuffleInputSize + nextShuffleInputSize > targetPostShuffleInputSize
+        || postShuffleInputRowCount + nextShuffleInputRowCount > targetPostShuffleRowCount) {
         partitionEndIndices += i + 1
         partitionStartIndices += nextIndex
-        postShuffleInput = nextShuffleInput
+        postShuffleInputSize = nextShuffleInputSize
+        postShuffleInputRowCount = nextShuffleInputRowCount
         i = nextIndex
       } else {
-        postShuffleInput = increaseSizeAndRowCount(postShuffleInput, nextShuffleInput)
-
+        postShuffleInputSize += nextShuffleInputSize
+        postShuffleInputRowCount += nextShuffleInputRowCount
         i += 1
       }
       nextIndex = nextStartIndex(nextIndex + 1)
