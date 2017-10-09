@@ -181,7 +181,6 @@ final class ShuffleExternalSorter extends MemoryConsumer {
       blockManager.getDiskWriter(blockId, file, ser, fileBufferSizeBytes, writeMetricsToUse);
 
     int currentPartition = -1;
-    int lastNumRecordsWritten = 0;
     while (sortedRecords.hasNext()) {
       sortedRecords.loadNext();
       final int partition = sortedRecords.packedRecordPointer.getPartitionId();
@@ -191,11 +190,8 @@ final class ShuffleExternalSorter extends MemoryConsumer {
         if (currentPartition != -1) {
           final FileSegment fileSegment = writer.commitAndGet();
           spillInfo.partitionLengths[currentPartition] = fileSegment.length();
-          spillInfo.partitionRows[currentPartition] =
-              writer.getNumRecordsWritten() - lastNumRecordsWritten;
         }
         currentPartition = partition;
-        lastNumRecordsWritten = writer.getNumRecordsWritten();
       }
 
       final long recordPointer = sortedRecords.packedRecordPointer.getRecordPointer();
@@ -215,14 +211,12 @@ final class ShuffleExternalSorter extends MemoryConsumer {
     }
 
     final FileSegment committedSegment = writer.commitAndGet();
-    final int numRecordsWritten = writer.getNumRecordsWritten();
     writer.close();
     // If `writeSortedFile()` was called from `closeAndGetSpills()` and no records were inserted,
     // then the file might be empty. Note that it might be better to avoid calling
     // writeSortedFile() in that case.
     if (currentPartition != -1) {
       spillInfo.partitionLengths[currentPartition] = committedSegment.length();
-      spillInfo.partitionRows[currentPartition] = numRecordsWritten - lastNumRecordsWritten;
       spills.add(spillInfo);
     }
 

@@ -29,7 +29,6 @@ import org.apache.spark._
 import org.apache.spark.executor.ShuffleWriteMetrics
 import org.apache.spark.internal.Logging
 import org.apache.spark.serializer._
-import org.apache.spark.shuffle.sort.MapInfo
 import org.apache.spark.storage.{BlockId, DiskBlockObjectWriter}
 
 /**
@@ -683,11 +682,10 @@ private[spark] class ExternalSorter[K, V, C](
    */
   def writePartitionedFile(
       blockId: BlockId,
-      outputFile: File): MapInfo = {
+      outputFile: File): Array[Long] = {
 
     // Track location of each range in the output file
     val lengths = new Array[Long](numPartitions)
-    val rows = new Array[Long](numPartitions)
     val writer = blockManager.getDiskWriter(blockId, outputFile, serInstance, fileBufferSize,
       context.taskMetrics().shuffleWriteMetrics)
 
@@ -699,7 +697,6 @@ private[spark] class ExternalSorter[K, V, C](
         val partitionId = it.nextPartition()
         while (it.hasNext && it.nextPartition() == partitionId) {
           it.writeNext(writer)
-          rows(partitionId) += 1
         }
         val segment = writer.commitAndGet()
         lengths(partitionId) = segment.length
@@ -710,7 +707,6 @@ private[spark] class ExternalSorter[K, V, C](
         if (elements.hasNext) {
           for (elem <- elements) {
             writer.write(elem._1, elem._2)
-            rows(id) += 1
           }
           val segment = writer.commitAndGet()
           lengths(id) = segment.length
@@ -723,7 +719,7 @@ private[spark] class ExternalSorter[K, V, C](
     context.taskMetrics().incDiskBytesSpilled(diskBytesSpilled)
     context.taskMetrics().incPeakExecutionMemory(peakMemoryUsedBytes)
 
-    new MapInfo(lengths, rows)
+    lengths
   }
 
   def stop(): Unit = {

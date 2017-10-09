@@ -321,13 +321,8 @@ public class UnsafeShuffleWriterSuite {
     for (long size: partitionSizesInMergedFile) {
       sumOfPartitionSizes += size;
     }
-    assertEquals(sumOfPartitionSizes, mergedOutputFile.length());
 
-    long sumOfPartitionRows = 0;
-    for (int i = 0; i < NUM_PARTITITONS; i++) {
-      sumOfPartitionRows += mapStatus.get().getRowForBlock(i);
-    }
-    assertEquals(sumOfPartitionRows, 6);
+    assertEquals(sumOfPartitionSizes, mergedOutputFile.length());
 
     assertEquals(HashMultiset.create(dataToWrite), HashMultiset.create(readRecordsFromFile()));
     assertSpillFilesWereCleanedUp();

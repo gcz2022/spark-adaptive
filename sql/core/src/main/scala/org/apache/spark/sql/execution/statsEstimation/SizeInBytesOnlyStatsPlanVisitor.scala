@@ -74,8 +74,7 @@ object SizeInBytesOnlyStatsPlanVisitor extends SparkPlanVisitor[Statistics] {
   override def visitShuffleExchange(p: ShuffleExchange): Statistics = {
     if (p.mapOutputStatistics != null) {
       val sizeInBytes = p.mapOutputStatistics.bytesByPartitionId.sum
-      val rowCount = p.mapOutputStatistics.rowsByPartitionId.sum
-      Statistics(sizeInBytes = sizeInBytes, rowCount = Some(rowCount))
+      Statistics(sizeInBytes = sizeInBytes)
     } else {
       visitUnaryExecNode(p)
     }
