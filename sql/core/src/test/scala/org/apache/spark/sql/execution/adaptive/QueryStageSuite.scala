@@ -20,6 +20,7 @@ package org.apache.spark.sql.execution.adaptive
 import org.scalatest.BeforeAndAfterAll
 
 import org.apache.spark.SparkFunSuite
+import org.apache.spark.internal.config
 import org.apache.spark.sql._
 import org.apache.spark.sql.execution.joins.{BroadcastHashJoinExec, SortMergeJoinExec}
 import org.apache.spark.sql.functions._
@@ -50,6 +51,7 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
       .appName("test")
       .config("spark.ui.enabled", "false")
       .config("spark.driver.allowMultipleContexts", "true")
+      .config(config.SHUFFLE_STATISTICS_VERBOSE.key, "true")
       .config(SQLConf.SHUFFLE_PARTITIONS.key, "5")
       .config(SQLConf.ADAPTIVE_EXECUTION_ENABLED.key, "true")
       .config(SQLConf.AUTO_BROADCASTJOIN_THRESHOLD.key, "-1")
