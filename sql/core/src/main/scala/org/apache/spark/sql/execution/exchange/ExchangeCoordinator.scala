@@ -166,7 +166,7 @@ class ExchangeCoordinator(
       var j = 0
       while (j < mapOutputStatistics.length) {
         size += mapOutputStatistics(j).bytesByPartitionId(partitionId)
-        rowCount += mapOutputStatistics(j).rowsByPartitionId(partitionId)
+        rowCount += mapOutputStatistics(j).recordsByPartitionId(partitionId)
         j += 1
       }
       (size, rowCount)
