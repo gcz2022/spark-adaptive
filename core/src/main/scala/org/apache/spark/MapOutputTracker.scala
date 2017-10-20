@@ -503,6 +503,7 @@ private[spark] class MapOutputTrackerMaster(
       }
       val threadPool = ThreadUtils.newDaemonFixedThreadPool(parallelism, "adaptive-map-statistics")
 
+      log.warn("Current sizelength: ${totalSizes.length}, parallelism: $parallelism")
       (0 until totalSizes.length).grouped(totalSizes.length / parallelism).foreach { reduceIds =>
         mapStatusSubmitTasks += threadPool.submit(
           new Runnable {
