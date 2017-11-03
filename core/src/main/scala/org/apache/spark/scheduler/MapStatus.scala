@@ -229,12 +229,14 @@ private[spark] class HighlyCompressedMapStatus private (
     emptyBlocks.writeExternal(out)
     tinyBlocks.writeExternal(out)
     out.writeLong(avgSmallSize)
+    out.writeLong(avgTinySize)
     out.writeInt(hugeBlockSizes.size)
     hugeBlockSizes.foreach { kv =>
       out.writeInt(kv._1)
       out.writeByte(kv._2)
     }
     out.writeLong(avgSmallRecord)
+    out.writeLong(avgTinyRecord)
     out.writeInt(hugeBlockRecords.size)
     hugeBlockRecords.foreach { kv =>
       out.writeInt(kv._1)
@@ -249,6 +251,7 @@ private[spark] class HighlyCompressedMapStatus private (
     tinyBlocks = new RoaringBitmap()
     tinyBlocks.readExternal(in)
     avgSmallSize = in.readLong()
+    avgTinySize = in.readLong()
     val count = in.readInt()
     val hugeBlockSizesArray = mutable.ArrayBuffer[Tuple2[Int, Byte]]()
     (0 until count).foreach { _ =>
@@ -258,6 +261,7 @@ private[spark] class HighlyCompressedMapStatus private (
     }
     hugeBlockSizes = hugeBlockSizesArray.toMap
     avgSmallRecord = in.readLong()
+    avgTinyRecord = in.readLong()
     val recordCount = in.readInt()
     val hugeBlockRecordsArray = mutable.ArrayBuffer[Tuple2[Int, Byte]]()
     (0 until recordCount).foreach { _ =>
