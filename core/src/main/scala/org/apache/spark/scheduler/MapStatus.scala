@@ -187,7 +187,8 @@ private[spark] class HighlyCompressedMapStatus private (
   require(loc == null || avgTinySize > 0 || avgSmallSize > 0 || hugeBlockSizes.size > 0 ||
     numNonEmptyBlocks == 0, "Average size can only be zero for map stages that produced no output")
 
-  protected def this() = this(null, -1, null, -1, null, -1, null)  // For deserialization only
+  // For deserialization only
+  protected def this() = this(null, -1, null, null, -1, -1, null, -1, -1, null)
 
   override def location: BlockManagerId = loc
 
