@@ -25,7 +25,7 @@ import scala.collection.mutable.ArrayBuffer
 import org.roaringbitmap.RoaringBitmap
 
 import org.apache.spark.SparkEnv
-import org.apache.spark.internal.config
+import org.apache.spark.internal.{config, Logging}
 import org.apache.spark.storage.BlockManagerId
 import org.apache.spark.util.Utils
 
@@ -258,7 +258,7 @@ private[spark] class HighlyCompressedMapStatus private (
   }
 }
 
-private[spark] object HighlyCompressedMapStatus {
+private[spark] object HighlyCompressedMapStatus extends Logging {
   def apply(loc: BlockManagerId, uncompressedSizes: Array[Long],
     uncompressedRecords: Array[Long] = Array[Long]()): HighlyCompressedMapStatus = {
     // We must keep track of which blocks are empty so that we don't report a zero-sized
@@ -285,6 +285,7 @@ private[spark] object HighlyCompressedMapStatus {
         .map(_.conf.get(config.SHUFFLE_ACCURATE_BLOCK_SIZE_THRESHOLD))
         .getOrElse(config.SHUFFLE_ACCURATE_BLOCK_SIZE_THRESHOLD.defaultValue.get)
     }
+    logInfo(s"threshold: ${threshold}")
 
     val hugeBlockSizesArray = ArrayBuffer[Tuple2[Int, Byte]]()
     while (i < totalNumBlocks) {
@@ -324,6 +325,7 @@ private[spark] object HighlyCompressedMapStatus {
         .map(_.conf.get(config.SHUFFLE_ACCURATE_BLOCK_RECORD_THRESHOLD))
         .getOrElse(config.SHUFFLE_ACCURATE_BLOCK_RECORD_THRESHOLD.defaultValue.get)
     }
+    logInfo(s"recordThreshold: ${recordThreshold}")
     val hugeBlockRecordsArray = ArrayBuffer[Tuple2[Int, Byte]]()
     if (uncompressedRecords.nonEmpty) {
       i = 0
