@@ -272,9 +272,20 @@ private[spark] object HighlyCompressedMapStatus {
     // we expect that there will be far fewer of them, so we will perform fewer bitmap insertions.
     val emptyBlocks = new RoaringBitmap()
     val totalNumBlocks = uncompressedSizes.length
-    val threshold = Option(SparkEnv.get)
-      .map(_.conf.get(config.SHUFFLE_ACCURATE_BLOCK_SIZE_THRESHOLD))
-      .getOrElse(config.SHUFFLE_ACCURATE_BLOCK_SIZE_THRESHOLD.defaultValue.get)
+    val adaptiveAccurateBlockThresholdEnabled = Option(SparkEnv.get)
+      .map(_.conf.get(config.SHUFFLE_ADAPTIVE_ACCURATE_BLOCK_THRESHOLD_ENABLED))
+      .getOrElse(config.SHUFFLE_ADAPTIVE_ACCURATE_BLOCK_THRESHOLD_ENABLED.defaultValue.get)
+    val threshold = if (adaptiveAccurateBlockThresholdEnabled) {
+      val tempSizes = uncompressedSizes.sorted
+      val average = tempSizes.sum / totalNumBlocks
+      val median = tempSizes(totalNumBlocks / 2)
+      (average + median) / 2
+    } else {
+      Option(SparkEnv.get)
+        .map(_.conf.get(config.SHUFFLE_ACCURATE_BLOCK_SIZE_THRESHOLD))
+        .getOrElse(config.SHUFFLE_ACCURATE_BLOCK_SIZE_THRESHOLD.defaultValue.get)
+    }
+
     val hugeBlockSizesArray = ArrayBuffer[Tuple2[Int, Byte]]()
     while (i < totalNumBlocks) {
       val size = uncompressedSizes(i)
@@ -302,9 +313,17 @@ private[spark] object HighlyCompressedMapStatus {
     var recordSmallBlocks: Long = 0
     numSmallBlocks = 0
     var avgRecord: Long = -1
-    val recordThreshold = Option(SparkEnv.get)
-      .map(_.conf.get(config.SHUFFLE_ACCURATE_BLOCK_RECORD_THRESHOLD))
-      .getOrElse(config.SHUFFLE_ACCURATE_BLOCK_RECORD_THRESHOLD.defaultValue.get)
+
+    val recordThreshold = if (adaptiveAccurateBlockThresholdEnabled) {
+      val tempRecords = uncompressedRecords.sorted
+      val average = tempRecords.sum / totalNumBlocks
+      val median = tempRecords(totalNumBlocks / 2)
+      (average + median) / 2
+    } else {
+      Option(SparkEnv.get)
+        .map(_.conf.get(config.SHUFFLE_ACCURATE_BLOCK_RECORD_THRESHOLD))
+        .getOrElse(config.SHUFFLE_ACCURATE_BLOCK_RECORD_THRESHOLD.defaultValue.get)
+    }
     val hugeBlockRecordsArray = ArrayBuffer[Tuple2[Int, Byte]]()
     if (uncompressedRecords.nonEmpty) {
       i = 0

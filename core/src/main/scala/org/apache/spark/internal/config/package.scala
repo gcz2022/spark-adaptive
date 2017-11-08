@@ -300,6 +300,12 @@ package object config {
       .booleanConf
       .createWithDefault(false)
 
+  private[spark] val SHUFFLE_ADAPTIVE_ACCURATE_BLOCK_THRESHOLD_ENABLED =
+    ConfigBuilder("spark.shuffle.adaptive.accurateBlockThreshold.enabled")
+      .doc("")
+      .booleanConf
+      .createWithDefault(true)
+
   private[spark] val SHUFFLE_ACCURATE_BLOCK_SIZE_THRESHOLD =
     ConfigBuilder("spark.shuffle.accurateBlockThreshold")
       .doc("When we compress the size of shuffle blocks in HighlyCompressedMapStatus, we will " +
