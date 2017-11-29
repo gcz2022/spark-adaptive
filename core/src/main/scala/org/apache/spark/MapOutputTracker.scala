@@ -534,7 +534,7 @@ private[spark] class MapOutputTrackerMaster(
 
       val parallelAggThreshold = conf.get(
         SHUFFLE_MAP_OUTPUT_PARALLEL_AGGREGATION_THRESHOLD)
-      val parallelism = math.min(
+      var parallelism = math.min(
         Runtime.getRuntime.availableProcessors(),
         statuses.length.toLong * totalSizes.length / parallelAggThreshold + 1).toInt
 
@@ -556,20 +556,28 @@ private[spark] class MapOutputTrackerMaster(
           }
         }
       } else {
-        val (sizeParallelism, recordParallelism) = (parallelism / 2, parallelism - parallelism / 2)
+        // records != -1 means there is records number info
+        val (sizeParallelism, recordParallelism) = if (records != -1) {
+          (parallelism / 2, parallelism - parallelism / 2)
+        } else {
+          (parallelism, 0)
+        }
         val threadPool = ThreadUtils.newDaemonFixedThreadPool(parallelism, "map-output-aggregate")
         try {
           implicit val executionContext = ExecutionContext.fromExecutor(threadPool)
-          val mapStatusSubmitTasks = equallyDivide(totalSizes.length, sizeParallelism).map {
+          var mapStatusSubmitTasks = equallyDivide(totalSizes.length, sizeParallelism).map {
             reduceIds => Future {
               for (s <- statuses; i <- reduceIds) {
                 totalSizes(i) += s.getSizeForBlock(i)
               }
             }
-          } ++ equallyDivide(totalRecords.length, recordParallelism).map {
-            reduceIds => Future {
-              for (s <- statuses; i <- reduceIds) {
-                totalRecords(i) += s.getRecordForBlock(i)
+          }
+          if (records != -1) {
+            mapStatusSubmitTasks ++= equallyDivide(totalRecords.length, recordParallelism).map {
+              reduceIds => Future {
+                for (s <- statuses; i <- reduceIds) {
+                  totalRecords(i) += s.getRecordForBlock(i)
+                }
               }
             }
           }
