@@ -27,6 +27,7 @@ import scala.concurrent.{ExecutionContext, Future}
 import scala.concurrent.duration.Duration
 import scala.reflect.ClassTag
 import scala.util.control.NonFatal
+
 import org.apache.spark.broadcast.{Broadcast, BroadcastManager}
 import org.apache.spark.internal.Logging
 import org.apache.spark.internal.config._
@@ -495,9 +496,9 @@ private[spark] class MapOutputTrackerMaster(
   }
 
   /**
-    * Grouped function of Range, this is to avoid traverse of all elements of Range using
-    * IterableLike's grouped function.
-    */
+   * Grouped function of Range, this is to avoid traverse of all elements of Range using
+   * IterableLike's grouped function.
+   */
   def rangeGrouped(range: Range, size: Int): Seq[Range] = {
     val start = range.start
     val step = range.step
@@ -508,9 +509,9 @@ private[spark] class MapOutputTrackerMaster(
   }
 
   /**
-    * To equally divide n elements into m buckets, basically each bucket should have n/m elements,
-    * for the remaining n%m elements, add one more element to the first n%m buckets each.
-    */
+   * To equally divide n elements into m buckets, basically each bucket should have n/m elements,
+   * for the remaining n%m elements, add one more element to the first n%m buckets each.
+   */
   def equallyDivide(numElements: Int, numBuckets: Int): Seq[Seq[Int]] = {
     val elementsPerBucket = numElements / numBuckets
     val remaining = numElements % numBuckets
