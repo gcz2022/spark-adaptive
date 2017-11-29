@@ -573,6 +573,7 @@ private[spark] class MapOutputTrackerMaster(
             }
           }
           if (records != -1) {
+            totalRecords = new Array[Long](dep.partitioner.numPartitions)
             mapStatusSubmitTasks ++= equallyDivide(totalRecords.length, recordParallelism).map {
               reduceIds => Future {
                 for (s <- statuses; i <- reduceIds) {
