@@ -143,10 +143,7 @@ case class OptimizeJoin(conf: SQLConf) extends Rule[SparkPlan] {
             }
 
             // Local shuffle read less partitions based on broadcastSide's row statistics
-//            optimizeForLocalShuffleReadLessPartitions(broadcastJoin, broadcastSidePlan)
-
-            queryStage.child = newChild
-            broadcastJoin
+            optimizeForLocalShuffleReadLessPartitions(broadcastJoin, broadcastSidePlan)
           } else {
             smj
           }
