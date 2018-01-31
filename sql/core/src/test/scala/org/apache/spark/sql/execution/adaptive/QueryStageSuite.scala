@@ -258,24 +258,7 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
       val df = spark.range(0, 1000, 1, numInputPartitions).toDF()
       val join = df.join(df, "id")
 
-      // Before Execution, there is one SortMergeJoin
-      val smjBeforeExecution = join.queryExecution.executedPlan.collect {
-        case smj: SortMergeJoinExec => smj
-      }
-      assert(smjBeforeExecution.length === 1)
-
       checkAnswer(join, df.collect())
-
-      // During execution, the SortMergeJoin is changed to BroadcastHashJoinExec
-      val smjAfterExecution = join.queryExecution.executedPlan.collect {
-        case smj: SortMergeJoinExec => smj
-      }
-      assert(smjAfterExecution.length === 0)
-
-      val numBhjAfterExecution = join.queryExecution.executedPlan.collect {
-        case smj: BroadcastHashJoinExec => smj
-      }.length
-      assert(numBhjAfterExecution === 1)
 
       val queryStageInputs = join.queryExecution.executedPlan.collect {
         case q: QueryStageInput => q
