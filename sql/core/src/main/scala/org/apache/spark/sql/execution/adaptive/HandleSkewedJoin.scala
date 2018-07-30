@@ -27,7 +27,6 @@ import org.apache.spark.sql.execution.joins.SortMergeJoinExec
 import org.apache.spark.sql.execution.statsEstimation.PartitionStatistics
 import org.apache.spark.sql.internal.SQLConf
 
-
 case class HandleSkewedJoin(conf: SQLConf) extends Rule[SparkPlan] {
 
   private val supportedJoinTypes = Inner :: Cross :: LeftSemi :: LeftOuter:: RightOuter :: Nil
