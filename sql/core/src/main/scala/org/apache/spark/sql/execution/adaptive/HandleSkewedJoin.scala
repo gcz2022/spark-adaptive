@@ -129,9 +129,6 @@ case class HandleSkewedJoin(conf: SQLConf) extends Rule[SparkPlan] {
       logInfo(s"right bytes Max : ${rightStats.bytesByPartitionId.max}")
       logInfo(s"right row counts Max : ${rightStats.recordsByPartitionId.max}")
 
-      def isLeftOuterJoin(t: JoinType) = t == LeftOuter
-      def isRightOuterJoin(t: JoinType) = t == RightOuter
-
       val skewedPartitions = mutable.HashSet[Int]()
       val subJoins = mutable.ArrayBuffer[SparkPlan](smj)
       for (partitionId <- 0 until numPartitions) {
@@ -140,14 +137,14 @@ case class HandleSkewedJoin(conf: SQLConf) extends Rule[SparkPlan] {
         if (isLeftSkew || isRightSkew) {
           skewedPartitions += partitionId
           // Skewed partition from the left table can't split in right outer join
-          val leftMapIdStartIndices = if (isLeftSkew && !isRightOuterJoin(joinType)) {
+          val leftMapIdStartIndices = if (isLeftSkew && joinType != RightOuter) {
             estimateMapIdStartIndices(left, partitionId, leftMedSize, leftMedRowCount)
           } else {
             Array(0)
           }
           // We split the right partition when joinType 1.is not left semi and 2.is not left outer
-          val rightMapIdStartIndices = if (isRightSkew && joinType != LeftSemi &&
-              !isLeftOuterJoin(joinType)) {
+          val rightMapIdStartIndices =
+            if (isRightSkew && joinType != LeftSemi && joinType != LeftOuter) {
             estimateMapIdStartIndices(right, partitionId, rightMedSize, rightMedRowCount)
           } else {
             Array(0)

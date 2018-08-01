@@ -376,11 +376,11 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
 
       // Check the answer.
       val expectedAnswerForLeftOuter =
-      spark
-        .range(0, 1000)
-        .selectExpr("0 as key", "id as value")
-        .union(spark.range(0, 1000).selectExpr("0 as key", "id as value"))
-        .union(spark.range(0, 10, 1).filter(_ % 5 != 0).selectExpr("id % 5 as key1", "null"))
+        spark
+          .range(0, 1000)
+          .selectExpr("0 as key", "id as value")
+          .union(spark.range(0, 1000).selectExpr("0 as key", "id as value"))
+          .union(spark.range(0, 10, 1).filter(_ % 5 != 0).selectExpr("id % 5 as key1", "null"))
       checkAnswer(
         leftOuterJoin,
         expectedAnswerForLeftOuter.collect())
@@ -453,10 +453,10 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
 
       // Check the answer.
       val expectedAnswerForLeftOuter =
-      spark
-        .range(0, 1000)
-        .selectExpr("0 as key", "id as value")
-        .union(spark.range(0, 1000).selectExpr("0 as key", "id as value"))
+        spark
+          .range(0, 1000)
+          .selectExpr("0 as key", "id as value")
+          .union(spark.range(0, 1000).selectExpr("0 as key", "id as value"))
       checkAnswer(
         leftOuterJoin,
         expectedAnswerForLeftOuter.collect())
