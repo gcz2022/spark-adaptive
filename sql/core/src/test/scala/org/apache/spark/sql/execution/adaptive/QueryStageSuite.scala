@@ -394,13 +394,13 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
         rightOuterJoin,
         expectedAnswerForRightOuter.collect())
 
-      // For the left outer join case: during execution, the SMJ is not translated to SMJ + 5 SMJ
+      // For the left outer join case: during execution, the SMJ can not be translated to any sub
       // joins due to the skewed side is on the right but the join type is left outer
       // (not correspond with each other)
       val smjAfterExecutionForLeftOuter = leftOuterJoin.queryExecution.executedPlan.collect {
         case smj: SortMergeJoinExec => smj
       }
-      assert(smjAfterExecutionForLeftOuter.length === 2)
+      assert(smjAfterExecutionForLeftOuter.length === 1)
 
       // For the right outer join case: during execution, the SMJ is changed to Union of SMJ + 5 SMJ
       // joins due to the skewed side is on the right and the join type is right
@@ -480,15 +480,15 @@ class QueryStageSuite extends SparkFunSuite with BeforeAndAfterAll {
       }
       assert(smjAfterExecutionForLeftOuter.length === 6)
 
-      // For the right outer join case: during execution, the SMJ is not translated to SMJ + 5 SMJ
+      // For the right outer join case: during execution, the SMJ can not be translated to any sub
       // joins due to the skewed side is on the left but the join type is right outer
       // (not correspond with each other)
       val smjAfterExecutionForRightOuter = rightOuterJoin.queryExecution.executedPlan.collect {
         case smj: SortMergeJoinExec => smj
       }
 
-      assert(smjAfterExecutionForRightOuter.length === 2)
-      val queryStageInputs = rightOuterJoin.queryExecution.executedPlan.collect {
+      assert(smjAfterExecutionForRightOuter.length === 1)
+      val queryStageInputs = leftOuterJoin.queryExecution.executedPlan.collect {
         case q: ShuffleQueryStageInput => q
       }
       assert(queryStageInputs.length === 2)

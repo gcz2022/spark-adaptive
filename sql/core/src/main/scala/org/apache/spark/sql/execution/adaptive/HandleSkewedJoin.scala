@@ -99,6 +99,11 @@ case class HandleSkewedJoin(conf: SQLConf) extends Rule[SparkPlan] {
     equallyDivide(queryStageInput.numMapper, numSplits).toArray
   }
 
+  /**
+   * Base optimization support check: the join type is supported and plan statistics is available.
+   * Note that for some join types(like left outer), whether a certain partition can be optimized
+   * also depends on [[supportOptimizationForThePartition]].
+   */
   private def supportOptimization(
       joinType: JoinType,
       left: QueryStageInput,
@@ -106,6 +111,20 @@ case class HandleSkewedJoin(conf: SQLConf) extends Rule[SparkPlan] {
       supportedJoinTypes.contains(joinType) &&
       left.childStage.stats.getPartitionStatistics.isDefined &&
       right.childStage.stats.getPartitionStatistics.isDefined
+  }
+
+  private def supportOptimizationForThePartition(
+      joinType: JoinType,
+      isLeftSkew: Boolean,
+      isRightSkew: Boolean): Boolean = {
+    (isLeftSkew && supportSplitOnLeftPartition(joinType)) ||
+      (isRightSkew && supportSplitOnRightPartition(joinType))
+  }
+
+  private def supportSplitOnLeftPartition(joinType: JoinType) = joinType != RightOuter
+  
+  private def supportSplitOnRightPartition(joinType: JoinType) = {
+    joinType != LeftOuter && joinType != LeftSemi
   }
 
   private def handleSkewedJoin(
@@ -134,17 +153,15 @@ case class HandleSkewedJoin(conf: SQLConf) extends Rule[SparkPlan] {
       for (partitionId <- 0 until numPartitions) {
         val isLeftSkew = isSkewed(leftStats, partitionId, leftMedSize, leftMedRowCount)
         val isRightSkew = isSkewed(rightStats, partitionId, rightMedSize, rightMedRowCount)
-        if (isLeftSkew || isRightSkew) {
+        if ((isLeftSkew || isRightSkew) &&
+            supportOptimizationForThePartition(joinType, isLeftSkew, isRightSkew)) {
           skewedPartitions += partitionId
-          // Skewed partition from the left table can't split in right outer join
-          val leftMapIdStartIndices = if (isLeftSkew && joinType != RightOuter) {
+          val leftMapIdStartIndices = if (isLeftSkew && supportSplitOnLeftPartition(joinType)) {
             estimateMapIdStartIndices(left, partitionId, leftMedSize, leftMedRowCount)
           } else {
             Array(0)
           }
-          // We split the right partition when joinType 1.is not left semi and 2.is not left outer
-          val rightMapIdStartIndices =
-            if (isRightSkew && joinType != LeftSemi && joinType != LeftOuter) {
+          val rightMapIdStartIndices = if (isRightSkew && supportSplitOnRightPartition(joinType)) {
             estimateMapIdStartIndices(right, partitionId, rightMedSize, rightMedRowCount)
           } else {
             Array(0)
